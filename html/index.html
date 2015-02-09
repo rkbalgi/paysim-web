@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html ng-app="paysimApp">
+<body ng-controller="lytCtrl as ctrl">
+
+<h1> PaySim v1.00</h1>
+<h2> Made possible by AngularJS and <a href="http://golang.org/"> Google's Go!</a> </h2>
+<table>
+
+<tr> 
+<td>  Specification  </td>
+<td> <span ng-bind="ctrl.specName"></span> </td> 
+<td> <button ng-click="ctrl.changeSpec()"> Change Spec</button>  </td>
+</tr>
+
+<tr ng-repeat="field_def in ctrl.specLayout">
+  <td> </td>
+  <td> <span ng-bind="field_def"></span> </td>
+  <td> <input type="text" ng-model="self.values[field_def]" ng-disabled="ctrl.isDisabled(field_def)" /> </td>  
+</tr>
+
+</table>
+
+
+
+
+<script src="./angular.js"> </script>
+<script type="text/javascript">
+angular.module('paysimApp',[])
+ .controller('lytCtrl',['$http', function($http){
+   var self=this;
+   self.specLayout='';
+   
+   self.specName='ISO8583_1 v1 (ASCII)';
+ 
+ self.changeSpec=function(){
+   //alert('Hi');
+   self.specName='ISO8583_1 v1 (ASCII)';
+   $http.get('http://localhost:8080/paysim/get_layout',{params:{spec_name:self.specName}})
+    .then(function(response){
+      self.specLayout=response.data;
+      
+      alert(self.specLayout);
+    },function(response){
+     console.error('error response received from server -'+response.status+' '+response.data);
+    });
+    
+   
+   //self.spec_layout
+ 
+ };
+ 
+ 
+    self.isDisabled=function(field_name){
+    
+    if (field_name=="Bitmap"){
+      return true
+    }else{
+     return false    
+    }
+    };
+    
+    self.Field=function(field_name){
+     return self.field_name
+    };
+
+}
+]);
+
+
+</script>
+</body>
+</html>
