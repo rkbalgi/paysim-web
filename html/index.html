@@ -3,43 +3,136 @@
 <body ng-controller="lytCtrl as ctrl">
 
 <h1> PaySim v1.00</h1>
-<h2> Made possible by AngularJS and <a href="http://golang.org/"> Google's Go!</a> </h2>
+<h2> Made possible by <a href="https://angularjs.org/">AngularJS</a> and <a href="http://golang.org/"> Google's Go!</a> </h2>
+<br/><br/>
+
+<div ng-show="ctrl.errorMsg" background-color="red">
+<span ng-bind="ctrl.errorMsg"/></span>
+</div>
+
+<div>
+<button ng-click="ctrl.loadTrace()" ng-show="true" ng-disabled="ctrl.showLoadTraceBtn()">Load Trace</button>
+<button ng-click="ctrl.changeSpec()"> Change Spec </button>
+<button ng-click="ctrl.sendTrace()"> Send Trace </button>
+
+</div>
+
 <table>
 
 <tr> 
 <td>  Specification  </td>
-<td> <span ng-bind="ctrl.specName"></span> </td> 
-<td> <button ng-click="ctrl.changeSpec()"> Change Spec</button>  </td>
+<td> 
+
+  <select ng-model="ctrl.selectedSpec"
+          ng-options="c.name for c in ctrl.specs">
+  </select>        
+</td> 
+</tr>
+<tr/>
+
+<tr ng-if="ctrl.specLoaded" style="background: #cce;font-family:consolas;font-size: 13px;">
+<td>Is Selected?</td>
+<td>Bit Position</td>
+<td>Field Name</td>
+<td>Field Value</td>
 </tr>
 
-<tr ng-repeat="field_def in ctrl.specLayout">
-  <td> </td>
-  <td> <span ng-bind="field_def"></span> </td>
-  <td> <input type="text" ng-model="self.values[field_def]" ng-disabled="ctrl.isDisabled(field_def)" /> </td>  
+<tr ng-repeat="fieldDef in ctrl.specLayout" style="background: #FFCC00;">
+  <td><input type="checkbox" 
+             ng-model="ctrl.requestBitmapSelection[fieldDef.BitPosition]" 
+             ng-disabled="ctrl.isCheckboxDisabled(fieldDef.Name)"
+             ng-change="ctrl.recomputeBitmap()"
+             style="text-align: center;">
+       </input>
+             
+  </td>
+  <td><span ng-bind="fieldDef.BitPosition"></span> 
+  <td><span style="font-family:consolas;font-size: 13px;" ng-bind="fieldDef.Name"></span> </td>
+  <td colspan="5"><input style="font-family:consolas;font-size: 13px;" type="text" size="40" 
+             ng-model="ctrl.requestFieldValues[fieldDef.JsSafeName]" 
+             ng-disabled="ctrl.isTextEditDisabled(fieldDef.Name)"/> 
+  </td>  
 </tr>
 
 </table>
 
+<br/>
+<div ng-show="ctrl.showLoadTrace"  style="background: #ccc; width: 400px; height: 200px; margin-left: -150px; margin-right: -100px; top: 50%; left: 50%;position: absolute;">
+<center>
+<span> Enter trace as Hex String </span>
+<textarea ng-model="ctrl.traceVal" rows="10" cols="40" maxLength="1024" style="resize: none;"></textarea>
+
+<br/>
+<div>
+<button ng-click="ctrl.processTrace()">OK</button>
+<button ng-click="ctrl.hideLoadTrace()">Cancel</button>
+</div>
+</br>
+</center>
+</div>
 
 
+<script src="./angular.js"> </script>
+<!-- <script src="./ui-bootstrap-tpls-0.12.0.js"> </script> -->
 
-<script src="./scripts/angular.js"> </script>
+
 <script type="text/javascript">
 angular.module('paysimApp',[])
  .controller('lytCtrl',['$http', function($http){
    var self=this;
-   self.specLayout='';
+   self.requestFieldValues={}
+   self.requestBitmapSelection=[true];
    
-   self.specName='ISO8583_1 v1 (ASCII)';
+   //default trace val for testing
+   self.traceVal='31313030F0040000E000000000000000000000013135333731313131313131313131313134F0F0F4F0F0F0303030303030303030313232313231320010e1e2e3a1a2a3a4d1d2d3a2a3a4d1d2d30010f1f2f3a1a2a3a4d1a2a3F0F2F8F3F7F1F1F1F1F1F1F1F1F1F1F1F1F47EF1F2F1F2F5F6F5F6F5F5F5F4e201f245ed4abb00';
+   
+   //empty out the bitmap
+   for (i=1;i<129;i++){
+    self.requestBitmapSelection[i]=false
+   }
+   
+   self.showLoadTrace=false;
+   
+   self.specLayout='';
+   self.specs=[{name:'ISO8583_1 v1 (ASCII)',id:1},{name:'ISO8583_1 v1 (ASCII)',id:2}];
+   //self.selectedSpec='ISO8583_1 v1 (ASCII)';
  
  self.changeSpec=function(){
-   //alert('Hi');
-   self.specName='ISO8583_1 v1 (ASCII)';
-   $http.get('http://localhost:8080/paysim/get_layout',{params:{spec_name:self.specName}})
+    //alert('Hi');
+    //alert(self.specs)
+    
+    
+    
+    if(!self.selectedSpec){
+     self.errorMsg='Please select a spec.';
+     return;  
+    }
+    
+    
+    
+    
+   //self.specName='ISO8583_1 v1 (ASCII)';
+   $http.get('http://localhost:8080/paysim/get_layout',{params:{spec_name:self.selectedSpec.name}})
     .then(function(response){
+      // self.requestFieldValues['Message$Type']='1100';
+       self.requestFieldValues['Bitmap']='00000000000000000000000000000000';
+       //self.requestBitmapSelection[35]=true;
       self.specLayout=response.data;
+      self.specLoaded=true;
       
-      alert(self.specLayout);
+      //lets build an array of bit position to
+      //field name
+      
+      self.posToFDef=new Array();
+      
+      for(i=0;i<self.specLayout.length;i++){
+        if (self.specLayout[i].BitPosition>0){
+        
+        self.posToFDef[self.specLayout[i].BitPosition]=self.specLayout[i].JsSafeName;
+        }
+      }
+      alert(self.posToFDef);
+      
     },function(response){
      console.error('error response received from server -'+response.status+' '+response.data);
     });
@@ -50,9 +143,18 @@ angular.module('paysimApp',[])
  };
  
  
-    self.isDisabled=function(field_name){
+    self.isTextEditDisabled=function(field_name){
     
     if (field_name=="Bitmap"){
+      return true
+    }else{
+     return false    
+    }
+    };
+    
+        self.isCheckboxDisabled=function(field_name){
+    
+    if (field_name=="Bitmap" || field_name=="Message Type"){
       return true
     }else{
      return false    
@@ -62,7 +164,85 @@ angular.module('paysimApp',[])
     self.Field=function(field_name){
      return self.field_name
     };
+    
+    self.recomputeBitmap=function(){
+    
+    var bitmap='';
+    for(i=1;i<129;i++){
+      if (self.requestBitmapSelection[i]){
+        bitmap=bitmap+'1';
+      }else{
+        bitmap=bitmap+'0';
+        
+      } 
+    
+    }
 
+     self.requestFieldValues['Bitmap']=bitmap
+    };
+    
+    self.loadTrace=function(){
+        self.showLoadTrace=true;
+    };
+    
+    
+    self.processTrace=function(){
+       //do processing and then
+       
+         $http.post('http://localhost:8080/paysim/parse_trace',{spec_name:self.selectedSpec.name,data:self.traceVal})
+    .then(function(response){
+      parsedData=response.data;
+      alert(parsedData);
+      //tmp='';
+      for(i=0;i<parsedData.length;i++){
+       if(parsedData[i].Data){ 
+       self.requestFieldValues[parsedData[i].JsSafeName]=parsedData[i].Data
+       self.requestBitmapSelection[parsedData[i].BitPosition]=true;
+       }
+       //tmp+=parsedData[i].Data;
+      }
+
+      self.specLoaded=true;
+    },function(response){
+     console.error('error response received from server -'+response.status+' '+response.data);
+    });
+       
+       
+       
+       self.showLoadTrace=false;
+    };
+    
+    self.showLoadTraceBtn=function(){
+       return(!self.specLoaded);
+    };
+    
+    self.hideLoadTrace=function(){
+        self.showLoadTrace=false;
+    };
+
+
+    self.sendTrace=function(){
+     var modReq={spec_name:self.selectedSpec,Message$Type:self.requestFieldValues['Message$Type'],Bitmap:self.requestFieldValues['Bitmap']};
+     modReq.BmpChildren=new Array();
+     alert(self.posToFDef);
+     alert('Hi')
+     for (i=1;i<129;i++){
+        if (self.posToFDef[i] && self.requestBitmapSelection[i]==true){
+        //alert(self.posToFDef[i].JsSafeName);
+          modReq.BmpChildren[i]=self.requestFieldValues[self.posToFDef[i].JsSafeName];
+        }
+     
+     }
+     
+       $http.post('http://localhost:8080/paysim/send_message',modReq)
+    .then(function(response){
+      alert(response.data);
+    },function(response){
+     console.error('error response received from server -'+response.status+' '+response.data);
+    });
+ 
+
+    };    
 }
 ]);
 
