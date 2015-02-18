@@ -6,8 +6,8 @@
 <h2> Made possible by <a href="https://angularjs.org/">AngularJS</a> and <a href="http://golang.org/"> Google's Go!</a> </h2>
 <br/><br/>
 
-<div ng-show="ctrl.errorMsg" background-color="red">
-<span ng-bind="ctrl.errorMsg"/></span>
+<div ng-show="ctrl.errorMsg" style="background: red;">
+<span ng-bind="ctrl.errorMsg"></span>
 </div>
 
 <div>
@@ -83,23 +83,24 @@ angular.module('paysimApp',[])
    self.requestFieldValues={}
    self.requestBitmapSelection=[true];
    
-   //default trace val for testing
+   // default trace val for testing
    self.traceVal='31313030F0040000E000000000000000000000013135333731313131313131313131313134F0F0F4F0F0F0303030303030303030313232313231320010e1e2e3a1a2a3a4d1d2d3a2a3a4d1d2d30010f1f2f3a1a2a3a4d1a2a3F0F2F8F3F7F1F1F1F1F1F1F1F1F1F1F1F1F47EF1F2F1F2F5F6F5F6F5F5F5F4e201f245ed4abb00';
    
-   //empty out the bitmap
+   // empty out the bitmap
    for (i=1;i<129;i++){
-    self.requestBitmapSelection[i]=false
+    self.requestBitmapSelection[i]=false;
    }
    
    self.showLoadTrace=false;
    
    self.specLayout='';
    self.specs=[{name:'ISO8583_1 v1 (ASCII)',id:1},{name:'ISO8583_1 v1 (ASCII)',id:2}];
-   //self.selectedSpec='ISO8583_1 v1 (ASCII)';
+   // self.selectedSpec='ISO8583_1 v1 (ASCII)';
  
  self.changeSpec=function(){
-    //alert('Hi');
-    //alert(self.specs)
+    // alert('Hi');
+    // alert(self.specs)
+    self.errorMsg='';
     
     
     
@@ -111,17 +112,17 @@ angular.module('paysimApp',[])
     
     
     
-   //self.specName='ISO8583_1 v1 (ASCII)';
+   // self.specName='ISO8583_1 v1 (ASCII)';
    $http.get('http://localhost:8080/paysim/get_layout',{params:{spec_name:self.selectedSpec.name}})
     .then(function(response){
       // self.requestFieldValues['Message$Type']='1100';
        self.requestFieldValues['Bitmap']='00000000000000000000000000000000';
-       //self.requestBitmapSelection[35]=true;
+       // self.requestBitmapSelection[35]=true;
       self.specLayout=response.data;
       self.specLoaded=true;
       
-      //lets build an array of bit position to
-      //field name
+      // lets build an array of bit position to
+      // field name
       
       self.posToFDef=new Array();
       
@@ -134,11 +135,12 @@ angular.module('paysimApp',[])
       alert(self.posToFDef);
       
     },function(response){
+     self.errorMsg='Server Error -'+response.status;
      console.error('error response received from server -'+response.status+' '+response.data);
     });
     
    
-   //self.spec_layout
+   // self.spec_layout
  
  };
  
@@ -146,23 +148,23 @@ angular.module('paysimApp',[])
     self.isTextEditDisabled=function(field_name){
     
     if (field_name=="Bitmap"){
-      return true
+      return true;
     }else{
-     return false    
+     return false;    
     }
     };
     
         self.isCheckboxDisabled=function(field_name){
     
     if (field_name=="Bitmap" || field_name=="Message Type"){
-      return true
+      return true;
     }else{
-     return false    
+     return false;    
     }
     };
     
     self.Field=function(field_name){
-     return self.field_name
+     return self.field_name;
     };
     
     self.recomputeBitmap=function(){
@@ -177,7 +179,6 @@ angular.module('paysimApp',[])
       } 
     
     }
-
      self.requestFieldValues['Bitmap']=bitmap
     };
     
@@ -187,23 +188,25 @@ angular.module('paysimApp',[])
     
     
     self.processTrace=function(){
-       //do processing and then
+    self.errorMsg='';
+       // do processing and then
        
          $http.post('http://localhost:8080/paysim/parse_trace',{spec_name:self.selectedSpec.name,data:self.traceVal})
     .then(function(response){
       parsedData=response.data;
       alert(parsedData);
-      //tmp='';
+      // tmp='';
       for(i=0;i<parsedData.length;i++){
        if(parsedData[i].Data){ 
-       self.requestFieldValues[parsedData[i].JsSafeName]=parsedData[i].Data
+       self.requestFieldValues[parsedData[i].JsSafeName]=parsedData[i].Data;
        self.requestBitmapSelection[parsedData[i].BitPosition]=true;
        }
-       //tmp+=parsedData[i].Data;
+       // tmp+=parsedData[i].Data;
       }
 
       self.specLoaded=true;
     },function(response){
+     self.errorMsg='Server Error -'+response.status;
      console.error('error response received from server -'+response.status+' '+response.data);
     });
        
@@ -222,14 +225,15 @@ angular.module('paysimApp',[])
 
 
     self.sendTrace=function(){
+     self.errorMsg='';
      var modReq={spec_name:self.selectedSpec,Message$Type:self.requestFieldValues['Message$Type'],Bitmap:self.requestFieldValues['Bitmap']};
      modReq.BmpChildren=new Array();
      alert(self.posToFDef);
-     alert('Hi')
+     alert('Hi');
      for (i=1;i<129;i++){
-        if (self.posToFDef[i] && self.requestBitmapSelection[i]==true){
-        //alert(self.posToFDef[i].JsSafeName);
-          modReq.BmpChildren[i]=self.requestFieldValues[self.posToFDef[i].JsSafeName];
+        if (self.requestBitmapSelection[i]==true){
+        alert(self.posToFDef[i]);
+          modReq.BmpChildren[i]=self.requestFieldValues[self.posToFDef[i]];
         }
      
      }
@@ -238,6 +242,7 @@ angular.module('paysimApp',[])
     .then(function(response){
       alert(response.data);
     },function(response){
+     self.errorMsg='Server Error -'+response.status;
      console.error('error response received from server -'+response.status+' '+response.data);
     });
  
